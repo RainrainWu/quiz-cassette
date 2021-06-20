@@ -1,4 +1,4 @@
-package quizdeck
+package quiz_cassette
 
 import (
 	"go.uber.org/zap"
