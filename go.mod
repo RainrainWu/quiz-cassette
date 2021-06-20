@@ -3,9 +3,9 @@ module github.com/RainrainWu/quiz-cassette
 go 1.16
 
 require (
-	github.com/bwmarrin/discordgo v0.23.2
-	github.com/gorilla/websocket v1.4.2 // indirect
+	github.com/bwmarrin/discordgo v0.23.3-0.20210617211910-e72c457cb4ae
 	github.com/joho/godotenv v1.3.0
+	github.com/pkg/errors v0.9.1
 	go.uber.org/atomic v1.8.0 // indirect
 	go.uber.org/multierr v1.7.0 // indirect
 	go.uber.org/zap v1.17.0

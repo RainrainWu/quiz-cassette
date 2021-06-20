@@ -12,6 +12,7 @@ var (
 
 type ConfigSet interface {
 	GetDiscordAuthToken() string
+	GetDiscordAppID() string
 	GetPostgresHost() string
 	GetPostgresPort() string
 	GetPostgresUser() string
@@ -21,6 +22,7 @@ type ConfigSet interface {
 
 type configSet struct {
 	discordAuthToken string
+	DiscordAppID     string
 	postgresHost     string
 	postgresPort     string
 	postgresUser     string
@@ -37,6 +39,7 @@ func NewConfigSet() ConfigSet {
 	}
 	instance := &configSet{
 		discordAuthToken: os.Getenv("DISCORD_AUTH_TOKEN"),
+		DiscordAppID:     os.Getenv("DISCORD_APP_ID"),
 		postgresHost:     os.Getenv("POSTGRES_HOST"),
 		postgresPort:     os.Getenv("POSTGRES_PORT"),
 		postgresUser:     os.Getenv("POSTGRES_USER"),
@@ -48,6 +51,10 @@ func NewConfigSet() ConfigSet {
 
 func (c *configSet) GetDiscordAuthToken() string {
 	return c.discordAuthToken
+}
+
+func (c *configSet) GetDiscordAppID() string {
+	return c.DiscordAppID
 }
 
 func (c *configSet) GetPostgresHost() string {
