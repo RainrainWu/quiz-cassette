@@ -11,10 +11,11 @@ import (
 
 type Database interface {
 	Connect() error
-	NewCassette(name, desc, discordID, telegramID string) error
-	UpdateCassette(id, name, desc string) error
-	GetCassette(id string) (Cassette, error)
-	DeleteCassette(id string) error
+	NewCassette(name, desc, discordID, telegramID string) (Cassette, error)
+	UpdateCassette(id uint, mutations map[string]interface{}) (Cassette, error)
+	GetCassette(id uint) (Cassette, error)
+	GetCassettesByDiscordOwner(discordID string) ([]Cassette, error)
+	DeleteCassette(id uint) error
 }
 
 type database struct {
@@ -77,10 +78,10 @@ func (d *database) Connect() error {
 	return err
 }
 
-func (d *database) NewCassette(name, desc, discordID, telegramID string) error {
+func (d *database) NewCassette(name, desc, discordID, telegramID string) (Cassette, error) {
 
 	if discordID == "" && telegramID == "" {
-		return errors.New("no user id specified.")
+		return Cassette{}, errors.New("no user id specified.")
 	}
 	record := Cassette{
 		Name:        name,
@@ -92,37 +93,38 @@ func (d *database) NewCassette(name, desc, discordID, telegramID string) error {
 		record.OwnerTelegramID = telegramID
 	}
 	d.connection.Create(&record)
-	return nil
+	return record, nil
 }
 
-func (d *database) UpdateCassette(id, name, desc string) error {
-
-	mutations := map[string]interface{}{}
-	if name != "" {
-		mutations["Name"] = name
-	}
-	if desc != "" {
-		mutations["Description"] = desc
-	}
+func (d *database) UpdateCassette(id uint, mutations map[string]interface{}) (Cassette, error) {
 
 	cassette, err := d.GetCassette(id)
 	if err != nil {
-		return err
+		return cassette, err
 	}
 	d.connection.Model(&cassette).Updates(mutations)
-	return nil
+	return cassette, nil
 }
 
-func (d *database) GetCassette(id string) (Cassette, error) {
+func (d *database) GetCassette(id uint) (Cassette, error) {
 
 	var cassette Cassette
 	if err := d.connection.First(&cassette, "ID = ?", id).Error; err != nil {
-		return cassette, errors.Wrap(err, fmt.Sprintf("cassette with id %s not found", id))
+		return cassette, errors.Wrap(err, fmt.Sprintf("cassette with id %d not found", id))
 	}
 	return cassette, nil
 }
 
-func (d *database) DeleteCassette(id string) error {
+func (d *database) GetCassettesByDiscordOwner(discordID string) ([]Cassette, error) {
+
+	var cassettes []Cassette
+	if err := d.connection.Where("owner_discord_id = ?", discordID).Find(&cassettes).Error; err != nil {
+		return cassettes, errors.Wrap(err, fmt.Sprintf("no cassettes found with dicord user %s", discordID))
+	}
+	return cassettes, nil
+}
+
+func (d *database) DeleteCassette(id uint) error {
 
 	cassette, err := d.GetCassette(id)
 	if err != nil {
