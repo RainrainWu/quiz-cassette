@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/RainrainWu/quiz-cassette/gateways"
+	"github.com/RainrainWu/quizdeck/gateways"
 )
 
 func main() {

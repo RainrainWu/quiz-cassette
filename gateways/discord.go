@@ -7,94 +7,94 @@ import (
 	"strconv"
 	"syscall"
 
-	cassette "github.com/RainrainWu/quiz-cassette"
+	"github.com/RainrainWu/quizdeck"
 	"github.com/bwmarrin/discordgo"
 	"go.uber.org/zap"
 )
 
 const (
-	cassetteCommandName      string = "cassette"
-	cassetteEmbedColorPublic int    = 0x00ff00
+	deckCommandName      string = "deck"
+	deckEmbedColorPublic int    = 0x00ff00
 )
 
 var (
 	Discord  DiscordGateway = newDiscordSession()
 	commands                = []*discordgo.ApplicationCommand{
 		{
-			Name:        cassetteCommandName,
-			Description: "commands for using cassette",
+			Name:        deckCommandName,
+			Description: "commands for using deck",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
 					Name:        "create",
-					Description: "create new cassette",
+					Description: "create new deck",
 					Type:        discordgo.ApplicationCommandOptionSubCommand,
 					Options: []*discordgo.ApplicationCommandOption{
 						{
 							Type:        discordgo.ApplicationCommandOptionString,
-							Name:        "cassete-name",
-							Description: "name for the new cassette",
+							Name:        "deck-name",
+							Description: "name for the new deck",
 							Required:    true,
 						},
 						{
 							Type:        discordgo.ApplicationCommandOptionString,
-							Name:        "cassete-description",
-							Description: "description for the new cassette",
+							Name:        "deck-description",
+							Description: "description for the new deck",
 							Required:    false,
 						},
 					},
 				},
 				{
 					Name:        "list",
-					Description: "list your cassettes",
+					Description: "list your decks",
 					Type:        discordgo.ApplicationCommandOptionSubCommand,
 				},
 				{
 					Name:        "show",
-					Description: "show exist cassette",
+					Description: "show exist deck",
 					Type:        discordgo.ApplicationCommandOptionSubCommand,
 					Options: []*discordgo.ApplicationCommandOption{
 						{
 							Type:        discordgo.ApplicationCommandOptionInteger,
-							Name:        "cassete-id",
-							Description: "the id of target cassette",
+							Name:        "deck-id",
+							Description: "the id of target deck",
 							Required:    true,
 						},
 					},
 				},
 				{
 					Name:        "update",
-					Description: "update exist cassette",
+					Description: "update exist deck",
 					Type:        discordgo.ApplicationCommandOptionSubCommand,
 					Options: []*discordgo.ApplicationCommandOption{
 						{
 							Type:        discordgo.ApplicationCommandOptionInteger,
-							Name:        "cassete-id",
-							Description: "the id of target cassette",
+							Name:        "deck-id",
+							Description: "the id of target deck",
 							Required:    true,
 						},
 						{
 							Type:        discordgo.ApplicationCommandOptionString,
-							Name:        "cassete-name",
-							Description: "name for the new cassette",
+							Name:        "deck-name",
+							Description: "name for the new deck",
 							Required:    false,
 						},
 						{
 							Type:        discordgo.ApplicationCommandOptionString,
-							Name:        "cassete-description",
-							Description: "description for the new cassette",
+							Name:        "deck-description",
+							Description: "description for the new deck",
 							Required:    false,
 						},
 					},
 				},
 				{
 					Name:        "delete",
-					Description: "delete exist cassette",
+					Description: "delete exist deck",
 					Type:        discordgo.ApplicationCommandOptionSubCommand,
 					Options: []*discordgo.ApplicationCommandOption{
 						{
 							Type:        discordgo.ApplicationCommandOptionInteger,
-							Name:        "cassete-id",
-							Description: "the id of target cassette",
+							Name:        "deck-id",
+							Description: "the id of target deck",
 							Required:    true,
 						},
 					},
@@ -103,7 +103,7 @@ var (
 		},
 	}
 	slashCommandHandlerMap = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
-		cassetteCommandName: handleCassetteCommand,
+		deckCommandName: handleDeckCommand,
 	}
 )
 
@@ -121,7 +121,7 @@ func newDiscordSession() DiscordGateway {
 
 	instance := &discordGateway{
 		session:   nil,
-		authToken: cassette.Config.GetDiscordAuthToken(),
+		authToken: quizdeck.Config.GetDiscordAuthToken(),
 	}
 	return instance
 }
@@ -137,16 +137,16 @@ func getDiscordUserID(i *discordgo.InteractionCreate) string {
 	return userID
 }
 
-func createCassetteEmbed(cst cassette.Cassette, color int) *discordgo.MessageEmbed {
+func createDeckEmbed(deck quizdeck.Deck, color int) *discordgo.MessageEmbed {
 	return &discordgo.MessageEmbed{
-		Title:       cst.Name,
-		Description: cst.Description,
+		Title:       deck.Name,
+		Description: deck.Description,
 		Type:        discordgo.EmbedTypeRich,
 		Color:       color,
 		Fields: []*discordgo.MessageEmbedField{
 			{
 				Name:   "ID",
-				Value:  strconv.FormatUint(uint64(cst.ID), 10),
+				Value:  strconv.FormatUint(uint64(deck.ID), 10),
 				Inline: true,
 			},
 		},
@@ -156,9 +156,9 @@ func createCassetteEmbed(cst cassette.Cassette, color int) *discordgo.MessageEmb
 func (g *discordGateway) createSlashCommand() {
 
 	for _, cmd := range commands {
-		_, err := g.session.ApplicationCommandCreate(cassette.Config.GetDiscordAppID(), "", cmd)
+		_, err := g.session.ApplicationCommandCreate(quizdeck.Config.GetDiscordAppID(), "", cmd)
 		if err != nil {
-			cassette.Logger.Fatal(
+			quizdeck.Logger.Fatal(
 				"discord slash command create failed",
 				zap.String("name", cmd.Name),
 				zap.String("err", err.Error()),
@@ -169,30 +169,30 @@ func (g *discordGateway) createSlashCommand() {
 
 func handleSlashCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
-	cassette.Logger.Info("recieve " + i.Data.Name)
+	quizdeck.Logger.Info("recieve " + i.Data.Name)
 	if handler, ok := slashCommandHandlerMap[i.Data.Name]; ok {
 		handler(s, i)
 	} else {
-		cassette.Logger.Warn(
+		quizdeck.Logger.Warn(
 			"undefined slash commands",
 			zap.String("command", i.Data.Name),
 		)
 	}
 }
 
-func handleCassetteCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
+func handleDeckCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 	content, embeds := "", []*discordgo.MessageEmbed{}
 	switch i.Data.Options[0].Name {
 	case "create":
-		_content, _embeds := handleCassetteCreateCommand(s, i)
+		_content, _embeds := handleDeckCreateCommand(s, i)
 		content, embeds = _content, append(embeds, _embeds...)
 	case "list":
-		embeds = append(embeds, handleCassetteListCommand(s, i)...)
+		embeds = append(embeds, handleDeckListCommand(s, i)...)
 	case "show":
-		embeds = append(embeds, handleCassetteShowCommand(s, i)...)
+		embeds = append(embeds, handleDeckShowCommand(s, i)...)
 	case "update":
-		_content, _embeds := handleCassetteUpdateCommand(s, i)
+		_content, _embeds := handleDeckUpdateCommand(s, i)
 		content, embeds = _content, append(embeds, _embeds...)
 	default:
 		content = fmt.Sprintf("unknown subcommand %s", i.Data.Options[0].Name)
@@ -206,43 +206,43 @@ func handleCassetteCommand(s *discordgo.Session, i *discordgo.InteractionCreate)
 	})
 }
 
-func handleCassetteCreateCommand(s *discordgo.Session, i *discordgo.InteractionCreate) (string, []*discordgo.MessageEmbed) {
+func handleDeckCreateCommand(s *discordgo.Session, i *discordgo.InteractionCreate) (string, []*discordgo.MessageEmbed) {
 	name := i.Data.Options[0].Options[0].StringValue()
 	desc := ""
 	if len(i.Data.Options[0].Options) > 1 {
 		desc = i.Data.Options[0].Options[1].StringValue()
 	}
 	userID := getDiscordUserID(i)
-	cst, _ := cassette.DBConn.NewCassette(name, desc, userID, "")
+	cst, _ := quizdeck.DBConn.NewDeck(name, desc, userID, "")
 	content := fmt.Sprintf("cassete %s created", name)
 	embeds := []*discordgo.MessageEmbed{
-		createCassetteEmbed(cst, cassetteEmbedColorPublic),
+		createDeckEmbed(cst, deckEmbedColorPublic),
 	}
 	return content, embeds
 }
 
-func handleCassetteListCommand(s *discordgo.Session, i *discordgo.InteractionCreate) []*discordgo.MessageEmbed {
+func handleDeckListCommand(s *discordgo.Session, i *discordgo.InteractionCreate) []*discordgo.MessageEmbed {
 
 	userID := getDiscordUserID(i)
 	embeds := []*discordgo.MessageEmbed{}
-	csts, _ := cassette.DBConn.GetCassettesByDiscordOwner(userID)
+	csts, _ := quizdeck.DBConn.GetDecksByDiscordOwner(userID)
 	for _, cst := range csts {
-		embeds = append(embeds, createCassetteEmbed(cst, cassetteEmbedColorPublic))
+		embeds = append(embeds, createDeckEmbed(cst, deckEmbedColorPublic))
 	}
 	return embeds
 }
 
-func handleCassetteShowCommand(s *discordgo.Session, i *discordgo.InteractionCreate) []*discordgo.MessageEmbed {
+func handleDeckShowCommand(s *discordgo.Session, i *discordgo.InteractionCreate) []*discordgo.MessageEmbed {
 
 	id := i.Data.Options[0].Options[0].UintValue()
-	cst, _ := cassette.DBConn.GetCassette(uint(id))
+	cst, _ := quizdeck.DBConn.GetDeck(uint(id))
 	embeds := []*discordgo.MessageEmbed{
-		createCassetteEmbed(cst, cassetteEmbedColorPublic),
+		createDeckEmbed(cst, deckEmbedColorPublic),
 	}
 	return embeds
 }
 
-func handleCassetteUpdateCommand(s *discordgo.Session, i *discordgo.InteractionCreate) (string, []*discordgo.MessageEmbed) {
+func handleDeckUpdateCommand(s *discordgo.Session, i *discordgo.InteractionCreate) (string, []*discordgo.MessageEmbed) {
 
 	id := i.Data.Options[0].Options[0].UintValue()
 	mutations := map[string]interface{}{}
@@ -252,20 +252,20 @@ func handleCassetteUpdateCommand(s *discordgo.Session, i *discordgo.InteractionC
 	if len(i.Data.Options[0].Options) > 2 {
 		mutations["Description"] = i.Data.Options[0].Options[2].StringValue()
 	}
-	cst, _ := cassette.DBConn.UpdateCassette(uint(id), mutations)
-	content := fmt.Sprintf("cassette %s updated", cst.Name)
+	cst, _ := quizdeck.DBConn.UpdateDeck(uint(id), mutations)
+	content := fmt.Sprintf("deck %s updated", cst.Name)
 	embeds := []*discordgo.MessageEmbed{
-		createCassetteEmbed(cst, cassetteEmbedColorPublic),
+		createDeckEmbed(cst, deckEmbedColorPublic),
 	}
 	return content, embeds
 }
 
-func handleCassetteDeleteCommand(s *discordgo.Session, i *discordgo.InteractionCreate) string {
+func handleDeckDeleteCommand(s *discordgo.Session, i *discordgo.InteractionCreate) string {
 
 	id := i.Data.Options[0].Options[0].UintValue()
-	cst, _ := cassette.DBConn.GetCassette(uint(id))
-	cassette.DBConn.DeleteCassette(uint(id))
-	return fmt.Sprintf("cassette %s updated", cst.Name)
+	cst, _ := quizdeck.DBConn.GetDeck(uint(id))
+	quizdeck.DBConn.DeleteDeck(uint(id))
+	return fmt.Sprintf("deck %s deleted", cst.Name)
 }
 
 func (g *discordGateway) Start() {
@@ -277,11 +277,11 @@ func (g *discordGateway) Start() {
 
 	err := g.session.Open()
 	if err != nil {
-		cassette.Logger.Warn("error opening connection, " + err.Error())
+		quizdeck.Logger.Warn("error opening connection, " + err.Error())
 		return
 	}
 
-	cassette.Logger.Info("Bot is now running.  Press CTRL-C to exit.")
+	quizdeck.Logger.Info("Bot is now running.  Press CTRL-C to exit.")
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	<-sc

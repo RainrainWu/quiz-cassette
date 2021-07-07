@@ -11,11 +11,11 @@ import (
 
 type Database interface {
 	Connect() error
-	NewCassette(name, desc, discordID, telegramID string) (Cassette, error)
-	UpdateCassette(id uint, mutations map[string]interface{}) (Cassette, error)
-	GetCassette(id uint) (Cassette, error)
-	GetCassettesByDiscordOwner(discordID string) ([]Cassette, error)
-	DeleteCassette(id uint) error
+	NewDeck(name, desc, discordID, telegramID string) (Deck, error)
+	UpdateDeck(id uint, mutations map[string]interface{}) (Deck, error)
+	GetDeck(id uint) (Deck, error)
+	GetDecksByDiscordOwner(discordID string) ([]Deck, error)
+	DeleteDeck(id uint) error
 }
 
 type database struct {
@@ -23,17 +23,17 @@ type database struct {
 	dsn        string
 }
 
-type Cassette struct {
+type Deck struct {
 	*gorm.Model
-	Name            string        `json:"name" gorm:"not null"`
-	Description     string        `json:"description" gorm:"not null"`
-	OwnerDiscordID  string        `json:"owner_discord_id"`
-	OwnerTelegramID string        `json:"owner_telegram_id"`
-	Quizzes         []Quiz        `json:"quizzes" gorm:"foreignKey:ID"`
-	Tags            []CassetteTag `json:"tags" gorm:"many2many:cassette_tag"`
+	Name            string    `json:"name" gorm:"not null"`
+	Description     string    `json:"description" gorm:"not null"`
+	OwnerDiscordID  string    `json:"owner_discord_id"`
+	OwnerTelegramID string    `json:"owner_telegram_id"`
+	Quizzes         []Quiz    `json:"quizzes" gorm:"foreignKey:ID"`
+	Tags            []DeckTag `json:"tags" gorm:"many2many:deck_tag"`
 }
 
-type CassetteTag struct {
+type DeckTag struct {
 	*gorm.Model
 	Name  string `json:"name" gorm:"not null"`
 	Count int    `json:"count" gorm:"not null"`
@@ -71,19 +71,19 @@ func (d *database) Connect() error {
 	var err error
 	d.connection, err = gorm.Open(postgres.Open(d.dsn), &gorm.Config{})
 	d.connection.AutoMigrate(
-		&Cassette{},
-		&CassetteTag{},
+		&Deck{},
+		&DeckTag{},
 		&Quiz{},
 	)
 	return err
 }
 
-func (d *database) NewCassette(name, desc, discordID, telegramID string) (Cassette, error) {
+func (d *database) NewDeck(name, desc, discordID, telegramID string) (Deck, error) {
 
 	if discordID == "" && telegramID == "" {
-		return Cassette{}, errors.New("no user id specified.")
+		return Deck{}, errors.New("no user id specified.")
 	}
-	record := Cassette{
+	record := Deck{
 		Name:        name,
 		Description: desc,
 	}
@@ -96,40 +96,40 @@ func (d *database) NewCassette(name, desc, discordID, telegramID string) (Casset
 	return record, nil
 }
 
-func (d *database) UpdateCassette(id uint, mutations map[string]interface{}) (Cassette, error) {
+func (d *database) UpdateDeck(id uint, mutations map[string]interface{}) (Deck, error) {
 
-	cassette, err := d.GetCassette(id)
+	deck, err := d.GetDeck(id)
 	if err != nil {
-		return cassette, err
+		return deck, err
 	}
-	d.connection.Model(&cassette).Updates(mutations)
-	return cassette, nil
+	d.connection.Model(&deck).Updates(mutations)
+	return deck, nil
 }
 
-func (d *database) GetCassette(id uint) (Cassette, error) {
+func (d *database) GetDeck(id uint) (Deck, error) {
 
-	var cassette Cassette
-	if err := d.connection.First(&cassette, "ID = ?", id).Error; err != nil {
-		return cassette, errors.Wrap(err, fmt.Sprintf("cassette with id %d not found", id))
+	var deck Deck
+	if err := d.connection.First(&deck, "ID = ?", id).Error; err != nil {
+		return deck, errors.Wrap(err, fmt.Sprintf("cassette with id %d not found", id))
 	}
-	return cassette, nil
+	return deck, nil
 }
 
-func (d *database) GetCassettesByDiscordOwner(discordID string) ([]Cassette, error) {
+func (d *database) GetDecksByDiscordOwner(discordID string) ([]Deck, error) {
 
-	var cassettes []Cassette
-	if err := d.connection.Where("owner_discord_id = ?", discordID).Find(&cassettes).Error; err != nil {
-		return cassettes, errors.Wrap(err, fmt.Sprintf("no cassettes found with dicord user %s", discordID))
+	var decks []Deck
+	if err := d.connection.Where("owner_discord_id = ?", discordID).Find(&decks).Error; err != nil {
+		return decks, errors.Wrap(err, fmt.Sprintf("no decks found with discord user %s", discordID))
 	}
-	return cassettes, nil
+	return decks, nil
 }
 
-func (d *database) DeleteCassette(id uint) error {
+func (d *database) DeleteDeck(id uint) error {
 
-	cassette, err := d.GetCassette(id)
+	deck, err := d.GetDeck(id)
 	if err != nil {
 		return err
 	}
-	d.connection.Delete(&cassette, 1)
+	d.connection.Delete(&deck, 1)
 	return nil
 }
