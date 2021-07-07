@@ -7,9 +7,10 @@ import (
 	"strconv"
 	"syscall"
 
-	"github.com/RainrainWu/quizdeck"
 	"github.com/bwmarrin/discordgo"
 	"go.uber.org/zap"
+
+	quizdeck "github.com/RainrainWu/quizdeck"
 )
 
 const (
@@ -167,6 +168,18 @@ func (g *discordGateway) createSlashCommand() {
 	}
 }
 
+func (g *discordGateway) deleteSlashCommand() {
+
+	cmds, _ := g.session.ApplicationCommands(quizdeck.Config.GetDiscordAppID(), "")
+	for _, cmd := range cmds {
+		g.session.ApplicationCommandDelete(quizdeck.Config.GetDiscordAppID(), "", cmd.ID)
+		quizdeck.Logger.Info(
+			"delete slash command",
+			zap.String("name", cmd.Name),
+		)
+	}
+}
+
 func handleSlashCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 	quizdeck.Logger.Info("recieve " + i.Data.Name)
@@ -189,6 +202,9 @@ func handleDeckCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		content, embeds = _content, append(embeds, _embeds...)
 	case "list":
 		embeds = append(embeds, handleDeckListCommand(s, i)...)
+		if len(embeds) == 0 {
+			content = "no decks found"
+		}
 	case "show":
 		embeds = append(embeds, handleDeckShowCommand(s, i)...)
 	case "update":
@@ -214,7 +230,7 @@ func handleDeckCreateCommand(s *discordgo.Session, i *discordgo.InteractionCreat
 	}
 	userID := getDiscordUserID(i)
 	cst, _ := quizdeck.DBConn.NewDeck(name, desc, userID, "")
-	content := fmt.Sprintf("cassete %s created", name)
+	content := fmt.Sprintf("deck %s created", name)
 	embeds := []*discordgo.MessageEmbed{
 		createDeckEmbed(cst, deckEmbedColorPublic),
 	}
@@ -269,8 +285,10 @@ func handleDeckDeleteCommand(s *discordgo.Session, i *discordgo.InteractionCreat
 }
 
 func (g *discordGateway) Start() {
+
 	discordSession, _ := discordgo.New("Bot " + g.authToken)
 	g.session = discordSession
+
 	g.session.AddHandler(handleSlashCommand)
 	g.session.Identify.Intents = discordgo.IntentsGuildMessages
 	g.createSlashCommand()

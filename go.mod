@@ -3,7 +3,7 @@ module github.com/RainrainWu/quizdeck
 go 1.16
 
 require (
-	github.com/bwmarrin/discordgo v0.23.2
+	github.com/bwmarrin/discordgo v0.23.3-0.20210617211910-e72c457cb4ae
 	github.com/joho/godotenv v1.3.0
 	github.com/pkg/errors v0.9.1
 	go.uber.org/zap v1.18.1
